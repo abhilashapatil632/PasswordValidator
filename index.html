@@ -1,0 +1,2308 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>DFA Password Validator</title>
+
+<style>
+
+/* =========================
+   GLOBAL
+========================= */
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: Arial, sans-serif;
+}
+
+body {
+    background: #07111f;
+    color: #e2e8f0;
+    min-height: 100vh;
+}
+
+header {
+    text-align: center;
+    padding: 28px;
+    background: #0d1b2a;
+    border-bottom: 1px solid #26384d;
+}
+
+header h1 {
+    color: #38bdf8;
+    font-size: 32px;
+    margin-bottom: 8px;
+}
+
+header p {
+    color: #94a3b8;
+}
+
+
+/* =========================
+   CONTAINER
+========================= */
+
+.container {
+    width: 94%;
+    max-width: 1450px;
+    margin: 25px auto;
+}
+
+
+/* =========================
+   INPUT CARD
+========================= */
+
+.input-card {
+    background: #0d1b2a;
+    padding: 25px;
+    border-radius: 16px;
+    margin-bottom: 20px;
+}
+
+.input-card h2 {
+    color: #38bdf8;
+    margin-bottom: 15px;
+}
+
+.input-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+#passwordInput {
+    flex: 1;
+    min-width: 250px;
+    padding: 14px;
+    border-radius: 8px;
+    border: 2px solid #334155;
+    background: #07111f;
+    color: white;
+    font-size: 17px;
+    outline: none;
+}
+
+#passwordInput:focus {
+    border-color: #38bdf8;
+}
+
+button {
+    border: none;
+    padding: 13px 20px;
+    border-radius: 8px;
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+#playBtn {
+    background: #22c55e;
+}
+
+#stepBtn {
+    background: #f59e0b;
+}
+
+#resetBtn {
+    background: #ef4444;
+}
+
+button:hover {
+    opacity: 0.85;
+    transform: translateY(-2px);
+}
+
+
+/* =========================
+   INPUT SYMBOL DISPLAY
+========================= */
+
+.input-display {
+    margin-top: 22px;
+}
+
+.input-display h3 {
+    color: #94a3b8;
+    margin-bottom: 10px;
+}
+
+#characterContainer {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    min-height: 48px;
+}
+
+.character {
+    width: 42px;
+    height: 42px;
+    border-radius: 8px;
+    border: 2px solid #334155;
+    background: #1e293b;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    font-size: 18px;
+    font-weight: bold;
+
+    transition: 0.3s;
+}
+
+.character.active {
+    background: #f59e0b;
+    color: #111827;
+    border-color: #fbbf24;
+
+    transform: scale(1.2);
+
+    box-shadow:
+        0 0 20px #f59e0b;
+}
+
+.character.processed {
+    background: #14532d;
+    border-color: #22c55e;
+    color: #86efac;
+}
+
+
+/* =========================
+   PASSWORD RULES
+========================= */
+
+.rules {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.rule {
+    background: #1e293b;
+    padding: 12px;
+    border-radius: 8px;
+    text-align: center;
+    color: #94a3b8;
+    font-size: 13px;
+}
+
+.rule.valid {
+    background: #14532d;
+    color: #86efac;
+    border: 1px solid #22c55e;
+}
+
+
+/* =========================
+   MAIN GRID
+========================= */
+
+.main-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 20px;
+}
+
+.card {
+    background: #0d1b2a;
+    padding: 20px;
+    border-radius: 16px;
+}
+
+.card h2 {
+    color: #38bdf8;
+    margin-bottom: 15px;
+}
+
+
+/* =========================
+   DFA CONTAINER
+========================= */
+
+.dfa-container {
+    width: 100%;
+    overflow-x: auto;
+    background: #07111f;
+    border-radius: 12px;
+    padding: 15px;
+}
+
+.dfa {
+    position: relative;
+    min-width: 950px;
+    height: 500px;
+}
+
+
+/* =========================
+   SVG
+========================= */
+
+.dfa-svg {
+    position: absolute;
+    width: 950px;
+    height: 500px;
+    left: 0;
+    top: 0;
+}
+
+.dfa-svg line,
+.dfa-svg path {
+    stroke: #64748b;
+    stroke-width: 3;
+    fill: none;
+    transition: 0.3s;
+}
+
+.dfa-svg .active-transition {
+    stroke: #38bdf8;
+    stroke-width: 5;
+
+    filter:
+        drop-shadow(0 0 8px #38bdf8);
+}
+
+
+/* =========================
+   ARROW MARKER
+========================= */
+
+.arrow-normal {
+    fill: #64748b;
+}
+
+.arrow-active {
+    fill: #38bdf8;
+}
+
+
+/* =========================
+   TRANSITION LABEL
+========================= */
+
+.transition-label {
+    fill: #a5f3fc;
+    font-size: 16px;
+    font-weight: bold;
+    text-anchor: middle;
+}
+
+
+/* =========================
+   STATES
+========================= */
+
+.state {
+    position: absolute;
+
+    width: 95px;
+    height: 95px;
+
+    border-radius: 50%;
+
+    background: #0d1b2a;
+
+    border: 3px solid #64748b;
+
+    display: flex;
+
+    flex-direction: column;
+
+    justify-content: center;
+
+    align-items: center;
+
+    font-weight: bold;
+
+    transition: 0.4s;
+
+    z-index: 5;
+}
+
+.state small {
+    color: #94a3b8;
+    font-size: 11px;
+    margin-top: 4px;
+}
+
+.state.active {
+    border-color: #38bdf8;
+
+    transform: scale(1.12);
+
+    box-shadow:
+        0 0 15px #38bdf8,
+        0 0 30px rgba(56,189,248,0.4);
+}
+
+.state.accept {
+    border: 5px double #22c55e;
+}
+
+
+/* =========================
+   STATE POSITIONS
+========================= */
+
+#q0 {
+    left: 35px;
+    top: 205px;
+}
+
+#q1 {
+    left: 200px;
+    top: 205px;
+}
+
+#q2 {
+    left: 365px;
+    top: 205px;
+}
+
+#q3 {
+    left: 530px;
+    top: 205px;
+}
+
+#q4 {
+    left: 695px;
+    top: 205px;
+}
+
+#q5 {
+    left: 850px;
+    top: 205px;
+}
+
+
+/* =========================
+   MOVING TOKEN
+========================= */
+
+#movingToken {
+
+    position: absolute;
+
+    width: 45px;
+    height: 45px;
+
+    border-radius: 50%;
+
+    background: #f59e0b;
+
+    color: #111827;
+
+    display: none;
+
+    align-items: center;
+
+    justify-content: center;
+
+    font-weight: bold;
+
+    font-size: 20px;
+
+    z-index: 20;
+
+    box-shadow:
+        0 0 25px #f59e0b;
+
+    transition:
+        left 0.9s ease,
+        top 0.9s ease;
+}
+
+
+/* =========================
+   FORMULA
+========================= */
+
+.formula {
+    margin-top: 15px;
+    padding: 15px;
+    border-radius: 10px;
+    background: #07111f;
+    color: #67e8f9;
+    text-align: center;
+    font-family: monospace;
+    font-size: 17px;
+}
+
+
+/* =========================
+   STATUS
+========================= */
+
+.status {
+    margin-top: 15px;
+    padding: 15px;
+    border-radius: 10px;
+    text-align: center;
+    font-weight: bold;
+    font-size: 18px;
+}
+
+.waiting {
+    background: #1e293b;
+    color: #cbd5e1;
+}
+
+.success {
+    background: #14532d;
+    color: #86efac;
+    border: 1px solid #22c55e;
+}
+
+.failure {
+    background: #450a0a;
+    color: #fca5a5;
+    border: 1px solid #ef4444;
+}
+
+
+/* =========================
+   SUGGESTION
+========================= */
+
+.suggestion-box {
+    margin-top: 12px;
+    padding: 15px;
+    border-radius: 10px;
+    background: #172033;
+    color: #fbbf24;
+    line-height: 1.8;
+}
+
+.suggestion-box.correct {
+    background: #14532d;
+    color: #86efac;
+    text-align: center;
+    border: 1px solid #22c55e;
+}
+
+.suggestion-box.error {
+    background: #450a0a;
+    color: #fca5a5;
+    border: 1px solid #ef4444;
+}
+
+
+/* =========================
+   STATE INFO
+========================= */
+
+.state-info {
+    background: #07111f;
+    padding: 20px;
+    border-radius: 10px;
+    text-align: center;
+}
+
+.state-info h3 {
+    color: #94a3b8;
+}
+
+#currentState {
+    font-size: 55px;
+    color: #38bdf8;
+    margin: 10px;
+}
+
+#stateDescription {
+    color: #94a3b8;
+}
+
+
+/* =========================
+   STRENGTH
+========================= */
+
+.strength {
+    margin-top: 20px;
+}
+
+.strength-bar {
+    height: 12px;
+    background: #1e293b;
+    border-radius: 10px;
+    overflow: hidden;
+    margin-top: 8px;
+}
+
+#strengthFill {
+    height: 100%;
+    width: 0%;
+    transition: 0.5s;
+}
+
+.weak {
+    background: #ef4444;
+}
+
+.medium {
+    background: #f59e0b;
+}
+
+.strong {
+    background: #22c55e;
+}
+
+#strengthText {
+    margin-top: 8px;
+    color: #94a3b8;
+}
+
+
+/* =========================
+   LOG
+========================= */
+
+.log {
+    margin-top: 10px;
+    height: 220px;
+    overflow-y: auto;
+    padding: 10px;
+    background: #07111f;
+    border-radius: 10px;
+    font-family: monospace;
+}
+
+.log-entry {
+    padding: 8px;
+    border-bottom: 1px solid #1e293b;
+}
+
+.log-entry span {
+    color: #38bdf8;
+}
+
+
+/* =========================
+   EXPLANATION
+========================= */
+
+.explanation {
+    margin-top: 20px;
+    padding: 25px;
+    background: #0d1b2a;
+    border-radius: 16px;
+}
+
+.explanation h2 {
+    color: #38bdf8;
+    margin-bottom: 15px;
+}
+
+.explanation ul {
+    padding-left: 25px;
+    line-height: 1.9;
+}
+
+.dfa-formula {
+    margin-top: 15px;
+    padding: 18px;
+    background: #07111f;
+    border-radius: 10px;
+    color: #a5f3fc;
+    font-family: monospace;
+    line-height: 1.8;
+}
+
+
+/* =========================
+   RESPONSIVE
+========================= */
+
+@media(max-width: 1000px) {
+
+    .main-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .rules {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+</style>
+</head>
+
+
+<body>
+
+
+<header>
+
+<h1>🔐 Password Validator</h1>
+
+</header>
+
+
+<div class="container">
+
+
+<!-- ==================================================
+     INPUT SECTION
+================================================== -->
+
+<div class="input-card">
+
+<h2>Enter Password</h2>
+
+
+<div class="input-row">
+
+<input
+    id="passwordInput"
+    type="text"
+    placeholder="Example: Abc@1234"
+    autocomplete="off"
+>
+
+<button
+    id="playBtn"
+    onclick="playAnimation()">
+    ▶ Play
+</button>
+
+<button
+    id="stepBtn"
+    onclick="stepAnimation()">
+    ⏭ Step
+</button>
+
+<button
+    id="resetBtn"
+    onclick="resetAll()">
+    ↻ Reset
+</button>
+
+</div>
+
+
+<!-- INPUT STRING -->
+
+<div class="input-display">
+
+<h3>Input Symbols</h3>
+
+<div id="characterContainer">
+
+<span style="color:#64748b">
+Enter a password...
+</span>
+
+</div>
+
+</div>
+
+
+<!-- RULES -->
+
+<div class="rules">
+
+<div class="rule" id="lengthRule">
+✓ 8+ Characters
+</div>
+
+<div class="rule" id="upperRule">
+✓ Uppercase
+</div>
+
+<div class="rule" id="lowerRule">
+✓ Lowercase
+</div>
+
+<div class="rule" id="numberRule">
+✓ Number
+</div>
+
+<div class="rule" id="specialRule">
+✓ Special Character
+</div>
+
+</div>
+
+</div>
+
+
+<!-- ==================================================
+     MAIN
+================================================== -->
+
+<div class="main-grid">
+
+
+<!-- ==================================================
+     DFA
+================================================== -->
+
+<div class="card">
+
+<h2>
+DFA State Transition Diagram
+</h2>
+
+
+<div class="dfa-container">
+
+<div class="dfa">
+
+
+<!-- SVG TRANSITIONS -->
+
+<svg
+    class="dfa-svg"
+    viewBox="0 0 950 500">
+
+
+<defs>
+
+<!-- NORMAL ARROW -->
+
+<marker
+    id="arrow"
+    markerWidth="10"
+    markerHeight="10"
+    refX="9"
+    refY="3"
+    orient="auto"
+    markerUnits="strokeWidth">
+
+<path
+    d="M0,0 L0,6 L9,3 z"
+    class="arrow-normal">
+</path>
+
+</marker>
+
+
+<!-- ACTIVE ARROW -->
+
+<marker
+    id="arrowActive"
+    markerWidth="10"
+    markerHeight="10"
+    refX="9"
+    refY="3"
+    orient="auto"
+    markerUnits="strokeWidth">
+
+<path
+    d="M0,0 L0,6 L9,3 z"
+    class="arrow-active">
+</path>
+
+</marker>
+
+</defs>
+
+
+<!-- q0 → q1 -->
+
+<line
+    id="transition01"
+    x1="130"
+    y1="252"
+    x2="195"
+    y2="252"
+    marker-end="url(#arrow)">
+</line>
+
+
+<!-- q1 → q2 -->
+
+<line
+    id="transition12"
+    x1="295"
+    y1="252"
+    x2="360"
+    y2="252"
+    marker-end="url(#arrow)">
+</line>
+
+
+<!-- q2 → q3 -->
+
+<line
+    id="transition23"
+    x1="460"
+    y1="252"
+    x2="525"
+    y2="252"
+    marker-end="url(#arrow)">
+</line>
+
+
+<!-- q3 → q4 -->
+
+<line
+    id="transition34"
+    x1="625"
+    y1="252"
+    x2="690"
+    y2="252"
+    marker-end="url(#arrow)">
+</line>
+
+
+<!-- q4 → q5 -->
+
+<line
+    id="transition45"
+    x1="790"
+    y1="252"
+    x2="845"
+    y2="252"
+    marker-end="url(#arrow)">
+</line>
+
+
+<!-- q0 SELF LOOP -->
+
+<path
+    id="loop0"
+    d="M70 205
+       C25 145, 115 145, 70 205"
+    marker-end="url(#arrow)">
+</path>
+
+
+<!-- TRANSITION LABELS -->
+
+<text
+    x="162"
+    y="235"
+    class="transition-label">
+8+ chars
+</text>
+
+
+<text
+    x="327"
+    y="235"
+    class="transition-label">
+a-z
+</text>
+
+
+<text
+    x="492"
+    y="235"
+    class="transition-label">
+A-Z
+</text>
+
+
+<text
+    x="657"
+    y="235"
+    class="transition-label">
+0-9
+</text>
+
+
+<text
+    x="817"
+    y="235"
+    class="transition-label">
+@ # $
+</text>
+
+
+<text
+    x="70"
+    y="135"
+    class="transition-label">
+other
+</text>
+
+
+</svg>
+
+
+<!-- STATES -->
+
+
+<div
+    class="state active"
+    id="q0">
+
+<strong>q0</strong>
+
+<small>START</small>
+
+</div>
+
+
+<div
+    class="state"
+    id="q1">
+
+<strong>q1</strong>
+
+<small>LENGTH</small>
+
+</div>
+
+
+<div
+    class="state"
+    id="q2">
+
+<strong>q2</strong>
+
+<small>LOWERCASE</small>
+
+</div>
+
+
+<div
+    class="state"
+    id="q3">
+
+<strong>q3</strong>
+
+<small>UPPERCASE</small>
+
+</div>
+
+
+<div
+    class="state"
+    id="q4">
+
+<strong>q4</strong>
+
+<small>DIGIT</small>
+
+</div>
+
+
+<div
+    class="state accept"
+    id="q5">
+
+<strong>q5</strong>
+
+<small>ACCEPT</small>
+
+</div>
+
+
+<!-- MOVING INPUT -->
+
+<div id="movingToken">
+A
+</div>
+
+
+</div>
+
+</div>
+
+
+<!-- FORMULA -->
+
+<div
+    class="formula"
+    id="transitionFormula">
+
+δ(q0, ε) → q0
+
+</div>
+
+
+<!-- STATUS -->
+
+<div
+    id="status"
+    class="status waiting">
+
+Waiting for password input...
+
+</div>
+
+
+<!-- SUGGESTIONS -->
+
+<div
+    id="suggestionBox"
+    class="suggestion-box">
+
+💡 Enter a password to see suggestions.
+
+</div>
+
+</div>
+
+
+<!-- ==================================================
+     RIGHT PANEL
+================================================== -->
+
+<div class="card">
+
+<h2>
+Automaton Status
+</h2>
+
+
+<div class="state-info">
+
+<h3>
+Current State
+</h3>
+
+<div id="currentState">
+q0
+</div>
+
+<p id="stateDescription">
+Initial State
+</p>
+
+</div>
+
+
+<!-- STRENGTH -->
+
+<div class="strength">
+
+<h3>Password Strength</h3>
+
+<div class="strength-bar">
+
+<div id="strengthFill">
+</div>
+
+</div>
+
+<p id="strengthText">
+Not evaluated
+</p>
+
+</div>
+
+
+<!-- LOG -->
+
+<h3 style="margin-top:20px">
+Transition Log
+</h3>
+
+<div
+    class="log"
+    id="log">
+
+<div class="log-entry">
+Waiting for input...
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+
+<!-- ==================================================
+     EXPLANATION
+================================================== -->
+
+<div class="explanation">
+
+<h2>
+How This DFA Works
+</h2>
+
+
+<ul>
+
+<li>
+<strong>q0 → q1:</strong>
+The password must contain at least 8 characters.
+</li>
+
+<li>
+<strong>q1 → q2:</strong>
+A lowercase character <strong>a-z</strong> is detected.
+</li>
+
+<li>
+<strong>q2 → q3:</strong>
+An uppercase character <strong>A-Z</strong> is detected.
+</li>
+
+<li>
+<strong>q3 → q4:</strong>
+A numeric digit <strong>0-9</strong> is detected.
+</li>
+
+<li>
+<strong>q4 → q5:</strong>
+A special character such as
+<strong>@ # $ % !</strong> is detected.
+</li>
+
+<li>
+<strong>q5:</strong>
+Final accepting state.
+</li>
+
+</ul>
+
+
+<div class="dfa-formula">
+
+DFA = (Q, Σ, δ, q₀, F)
+
+<br><br>
+
+Q = {q0, q1, q2, q3, q4, q5}
+
+<br>
+
+Σ = {a-z, A-Z, 0-9, special}
+
+<br>
+
+q₀ = q0
+
+<br>
+
+F = {q5}
+
+<br><br>
+
+Password accepted when:
+
+<br>
+
+Length ≥ 8
+
+AND lowercase
+
+AND uppercase
+
+AND digit
+
+AND special character
+
+</div>
+
+</div>
+
+
+</div>
+
+
+<script>
+
+/* =====================================================
+   VARIABLES
+===================================================== */
+
+let password = "";
+
+let currentIndex = 0;
+
+let currentState = "q0";
+
+let animationRunning = false;
+
+
+/* =====================================================
+   INPUT
+===================================================== */
+
+const input =
+document.getElementById("passwordInput");
+
+
+input.addEventListener(
+    "input",
+    function() {
+
+        password = input.value;
+
+        currentIndex = 0;
+
+        currentState = "q0";
+
+        animationRunning = false;
+
+        createCharacters();
+
+        resetStates();
+
+        updateRules();
+
+        calculateStrength();
+
+        clearResult();
+
+    }
+);
+
+
+/* =====================================================
+   CREATE INPUT SYMBOLS
+===================================================== */
+
+function createCharacters() {
+
+    const container =
+    document.getElementById(
+        "characterContainer"
+    );
+
+    container.innerHTML = "";
+
+
+    if(password.length === 0) {
+
+        container.innerHTML =
+        `<span style="color:#64748b">
+            Enter a password...
+        </span>`;
+
+        return;
+    }
+
+
+    [...password].forEach(
+        (char,index) => {
+
+            const div =
+            document.createElement("div");
+
+            div.className =
+            "character";
+
+            div.id =
+            "char-" + index;
+
+            div.innerText =
+            char;
+
+            container.appendChild(div);
+
+        }
+    );
+
+}
+
+
+/* =====================================================
+   RULES
+===================================================== */
+
+function updateRules() {
+
+    const rules = {
+
+        lengthRule:
+        password.length >= 8,
+
+        upperRule:
+        /[A-Z]/.test(password),
+
+        lowerRule:
+        /[a-z]/.test(password),
+
+        numberRule:
+        /[0-9]/.test(password),
+
+        specialRule:
+        /[^A-Za-z0-9]/.test(password)
+
+    };
+
+
+    Object.keys(rules).forEach(id => {
+
+        const element =
+        document.getElementById(id);
+
+        element.classList.toggle(
+            "valid",
+            rules[id]
+        );
+
+    });
+
+}
+
+
+/* =====================================================
+   PASSWORD STRENGTH
+===================================================== */
+
+function calculateStrength() {
+
+    let score = 0;
+
+
+    if(password.length >= 8)
+        score += 20;
+
+    if(/[A-Z]/.test(password))
+        score += 20;
+
+    if(/[a-z]/.test(password))
+        score += 20;
+
+    if(/[0-9]/.test(password))
+        score += 20;
+
+    if(/[^A-Za-z0-9]/.test(password))
+        score += 20;
+
+
+    const fill =
+    document.getElementById(
+        "strengthFill"
+    );
+
+
+    fill.style.width =
+    score + "%";
+
+
+    fill.className = "";
+
+
+    if(score <= 40) {
+
+        fill.classList.add("weak");
+
+        document.getElementById(
+            "strengthText"
+        ).innerText = "Weak";
+
+    }
+
+    else if(score < 100) {
+
+        fill.classList.add("medium");
+
+        document.getElementById(
+            "strengthText"
+        ).innerText = "Medium";
+
+    }
+
+    else {
+
+        fill.classList.add("strong");
+
+        document.getElementById(
+            "strengthText"
+        ).innerText = "Strong";
+
+    }
+
+}
+
+
+/* =====================================================
+   PLAY
+===================================================== */
+
+async function playAnimation() {
+
+    if(password.length === 0) {
+
+        showEmptyMessage();
+
+        return;
+    }
+
+
+    if(animationRunning)
+        return;
+
+
+    animationRunning = true;
+
+    currentIndex = 0;
+
+    currentState = "q0";
+
+    resetStates();
+
+    clearLog();
+
+
+    while(
+        currentIndex < password.length &&
+        animationRunning
+    ) {
+
+        await processCharacter();
+
+        currentIndex++;
+
+        await sleep(700);
+
+    }
+
+
+    animationRunning = false;
+
+    showFinalResult();
+
+}
+
+
+/* =====================================================
+   STEP
+===================================================== */
+
+async function stepAnimation() {
+
+    if(password.length === 0) {
+
+        showEmptyMessage();
+
+        return;
+    }
+
+
+    if(currentIndex >= password.length) {
+
+        showFinalResult();
+
+        return;
+    }
+
+
+    await processCharacter();
+
+    currentIndex++;
+
+}
+
+
+/* =====================================================
+   PROCESS CHARACTER
+===================================================== */
+
+async function processCharacter() {
+
+    const char =
+    password[currentIndex];
+
+
+    const character =
+    document.getElementById(
+        "char-" + currentIndex
+    );
+
+
+    if(!character)
+        return;
+
+
+    character.classList.add("active");
+
+
+    for(
+        let i = 0;
+        i < currentIndex;
+        i++
+    ) {
+
+        const old =
+        document.getElementById(
+            "char-" + i
+        );
+
+        if(old)
+            old.classList.add("processed");
+
+    }
+
+
+    /*
+       Determine transition
+    */
+
+    const transition =
+    getTransition(char);
+
+
+    const from =
+    transition.from;
+
+    const to =
+    transition.to;
+
+
+    /*
+       Highlight arrow
+    */
+
+    const svgLine =
+    document.getElementById(
+        transition.line
+    );
+
+
+    if(svgLine) {
+
+        svgLine.classList.add(
+            "active-transition"
+        );
+
+        svgLine.setAttribute(
+            "marker-end",
+            "url(#arrowActive)"
+        );
+
+    }
+
+
+    /*
+       Moving input symbol
+    */
+
+    const token =
+    document.getElementById(
+        "movingToken"
+    );
+
+
+    token.innerText =
+    char;
+
+    token.style.display =
+    "flex";
+
+
+    const fromPos =
+    getStatePosition(from);
+
+
+    const toPos =
+    getStatePosition(to);
+
+
+    token.style.left =
+    fromPos.x + "px";
+
+    token.style.top =
+    fromPos.y + "px";
+
+
+    await sleep(150);
+
+
+    token.style.left =
+    toPos.x + "px";
+
+    token.style.top =
+    toPos.y + "px";
+
+
+    await sleep(900);
+
+
+    /*
+       Activate state
+    */
+
+    currentState = to;
+
+    activateState(to);
+
+
+    /*
+       Formula
+    */
+
+    document.getElementById(
+        "transitionFormula"
+    ).innerHTML =
+    `δ(${from}, '${char}') → ${to}`;
+
+
+    /*
+       Log
+    */
+
+    addLog(
+        `Input '${char}' : δ(${from}, '${char}') → ${to}`
+    );
+
+
+    /*
+       Remove arrow highlight
+    */
+
+    if(svgLine) {
+
+        svgLine.classList.remove(
+            "active-transition"
+        );
+
+        svgLine.setAttribute(
+            "marker-end",
+            "url(#arrow)"
+        );
+
+    }
+
+
+    token.style.display =
+    "none";
+
+}
+
+
+/* =====================================================
+   DFA TRANSITIONS
+===================================================== */
+
+function getTransition(char) {
+
+    /*
+       q0 → q1
+       minimum length
+    */
+
+    if(currentState === "q0") {
+
+        if(password.length >= 8) {
+
+            return {
+                from: "q0",
+                to: "q1",
+                line: "transition01"
+            };
+
+        }
+
+        return {
+            from: "q0",
+            to: "q0",
+            line: "loop0"
+        };
+
+    }
+
+
+    /*
+       q1 → q2
+       lowercase
+    */
+
+    if(
+        currentState === "q1" &&
+        /[a-z]/.test(char)
+    ) {
+
+        return {
+            from: "q1",
+            to: "q2",
+            line: "transition12"
+        };
+
+    }
+
+
+    /*
+       q2 → q3
+       uppercase
+    */
+
+    if(
+        currentState === "q2" &&
+        /[A-Z]/.test(char)
+    ) {
+
+        return {
+            from: "q2",
+            to: "q3",
+            line: "transition23"
+        };
+
+    }
+
+
+    /*
+       q3 → q4
+       digit
+    */
+
+    if(
+        currentState === "q3" &&
+        /[0-9]/.test(char)
+    ) {
+
+        return {
+            from: "q3",
+            to: "q4",
+            line: "transition34"
+        };
+
+    }
+
+
+    /*
+       q4 → q5
+       special
+    */
+
+    if(
+        currentState === "q4" &&
+        /[^A-Za-z0-9]/.test(char)
+    ) {
+
+        return {
+            from: "q4",
+            to: "q5",
+            line: "transition45"
+        };
+
+    }
+
+
+    /*
+       If condition not satisfied
+    */
+
+    return {
+        from: currentState,
+        to: currentState,
+        line: "loop0"
+    };
+
+}
+
+
+/* =====================================================
+   STATE POSITION
+===================================================== */
+
+function getStatePosition(state) {
+
+    const positions = {
+
+        q0: {
+            x: 60,
+            y: 230
+        },
+
+        q1: {
+            x: 225,
+            y: 230
+        },
+
+        q2: {
+            x: 390,
+            y: 230
+        },
+
+        q3: {
+            x: 555,
+            y: 230
+        },
+
+        q4: {
+            x: 720,
+            y: 230
+        },
+
+        q5: {
+            x: 875,
+            y: 230
+        }
+
+    };
+
+
+    return positions[state];
+
+}
+
+
+/* =====================================================
+   ACTIVATE STATE
+===================================================== */
+
+function activateState(state) {
+
+    document
+    .querySelectorAll(".state")
+    .forEach(
+        element =>
+        element.classList.remove(
+            "active"
+        )
+    );
+
+
+    document
+    .getElementById(state)
+    .classList.add("active");
+
+
+    document.getElementById(
+        "currentState"
+    ).innerText =
+    state;
+
+
+    const descriptions = {
+
+        q0:
+        "Initial state",
+
+        q1:
+        "Minimum length condition",
+
+        q2:
+        "Lowercase detected",
+
+        q3:
+        "Uppercase detected",
+
+        q4:
+        "Digit detected",
+
+        q5:
+        "Final accepting state"
+
+    };
+
+
+    document.getElementById(
+        "stateDescription"
+    ).innerText =
+    descriptions[state];
+
+}
+
+
+/* =====================================================
+   RESET STATES
+===================================================== */
+
+function resetStates() {
+
+    document
+    .querySelectorAll(".state")
+    .forEach(
+        state =>
+        state.classList.remove(
+            "active"
+        )
+    );
+
+
+    document
+    .getElementById("q0")
+    .classList.add("active");
+
+
+    currentState = "q0";
+
+
+    document.getElementById(
+        "currentState"
+    ).innerText = "q0";
+
+
+    document.getElementById(
+        "stateDescription"
+    ).innerText =
+    "Initial state";
+
+
+    document.getElementById(
+        "transitionFormula"
+    ).innerText =
+    "δ(q0, ε) → q0";
+
+
+    document.getElementById(
+        "movingToken"
+    ).style.display =
+    "none";
+
+
+    document
+    .querySelectorAll(
+        ".active-transition"
+    )
+    .forEach(
+        line =>
+        line.classList.remove(
+            "active-transition"
+        )
+    );
+
+}
+
+
+/* =====================================================
+   FINAL RESULT
+===================================================== */
+
+function showFinalResult() {
+
+    const status =
+    document.getElementById("status");
+
+
+    const suggestionBox =
+    document.getElementById(
+        "suggestionBox"
+    );
+
+
+    const suggestions = [];
+
+
+    if(password.length < 8) {
+
+        suggestions.push(
+            "Enter at least 8 characters."
+        );
+
+    }
+
+
+    if(!/[A-Z]/.test(password)) {
+
+        suggestions.push(
+            "Add at least one uppercase letter (A-Z)."
+        );
+
+    }
+
+
+    if(!/[a-z]/.test(password)) {
+
+        suggestions.push(
+            "Add at least one lowercase letter (a-z)."
+        );
+
+    }
+
+
+    if(!/[0-9]/.test(password)) {
+
+        suggestions.push(
+            "Add at least one number (0-9)."
+        );
+
+    }
+
+
+    if(!/[^A-Za-z0-9]/.test(password)) {
+
+        suggestions.push(
+            "Add at least one special character (@, #, $, %, !)."
+        );
+
+    }
+
+
+    if(suggestions.length === 0) {
+
+        activateState("q5");
+
+
+        status.className =
+        "status success";
+
+
+        status.innerHTML =
+        "✓ CORRECT PASSWORD";
+
+
+        suggestionBox.className =
+        "suggestion-box correct";
+
+
+        suggestionBox.innerHTML =
+        "🎉 Password accepted! All DFA conditions are satisfied.";
+
+
+        addLog(
+            "✓ ACCEPTED — q5 is the final state."
+        );
+
+    }
+
+    else {
+
+        status.className =
+        "status failure";
+
+
+        status.innerHTML =
+        "✗ INCORRECT PASSWORD";
+
+
+        suggestionBox.className =
+        "suggestion-box error";
+
+
+        suggestionBox.innerHTML =
+        "<strong>💡 Suggestions:</strong><br><br>" +
+
+        suggestions
+        .map(
+            s => "• " + s
+        )
+        .join("<br>");
+
+
+        addLog(
+            "✗ REJECTED — Password does not satisfy DFA."
+        );
+
+    }
+
+}
+
+
+/* =====================================================
+   EMPTY PASSWORD
+===================================================== */
+
+function showEmptyMessage() {
+
+    const status =
+    document.getElementById("status");
+
+
+    const suggestionBox =
+    document.getElementById(
+        "suggestionBox"
+    );
+
+
+    status.className =
+    "status failure";
+
+
+    status.innerHTML =
+    "✗ INCORRECT PASSWORD";
+
+
+    suggestionBox.className =
+    "suggestion-box error";
+
+
+    suggestionBox.innerHTML =
+    "<strong>💡 Please enter a password.</strong><br><br>" +
+
+    "• Minimum 8 characters<br>" +
+
+    "• At least one uppercase letter<br>" +
+
+    "• At least one lowercase letter<br>" +
+
+    "• At least one number<br>" +
+
+    "• At least one special character";
+
+}
+
+
+/* =====================================================
+   CLEAR RESULT
+===================================================== */
+
+function clearResult() {
+
+    const status =
+    document.getElementById(
+        "status"
+    );
+
+
+    status.className =
+    "status waiting";
+
+
+    status.innerText =
+    "Ready to validate password.";
+
+
+    const box =
+    document.getElementById(
+        "suggestionBox"
+    );
+
+
+    box.className =
+    "suggestion-box";
+
+
+    box.innerHTML =
+    "💡 Click ▶ Play to run the DFA animation.";
+
+}
+
+
+/* =====================================================
+   LOG
+===================================================== */
+
+function addLog(message) {
+
+    const log =
+    document.getElementById(
+        "log"
+    );
+
+
+    const entry =
+    document.createElement(
+        "div"
+    );
+
+
+    entry.className =
+    "log-entry";
+
+
+    entry.innerHTML =
+    `<span>δ</span> ${message}`;
+
+
+    log.prepend(entry);
+
+}
+
+
+/* =====================================================
+   CLEAR LOG
+===================================================== */
+
+function clearLog() {
+
+    document.getElementById(
+        "log"
+    ).innerHTML =
+    `<div class="log-entry">
+        Starting DFA validation...
+    </div>`;
+
+}
+
+
+/* =====================================================
+   RESET
+===================================================== */
+
+function resetAll() {
+
+    animationRunning = false;
+
+    currentIndex = 0;
+
+    currentState = "q0";
+
+    password = "";
+
+    input.value = "";
+
+    createCharacters();
+
+    resetStates();
+
+    clearLog();
+
+
+    document.getElementById(
+        "strengthFill"
+    ).style.width =
+    "0%";
+
+
+    document.getElementById(
+        "strengthFill"
+    ).className = "";
+
+
+    document.getElementById(
+        "strengthText"
+    ).innerText =
+    "Not evaluated";
+
+
+    document
+    .querySelectorAll(".rule")
+    .forEach(
+        rule =>
+        rule.classList.remove(
+            "valid"
+        )
+    );
+
+
+    document.getElementById(
+        "status"
+    ).className =
+    "status waiting";
+
+
+    document.getElementById(
+        "status"
+    ).innerText =
+    "Waiting for password input...";
+
+
+    document.getElementById(
+        "suggestionBox"
+    ).className =
+    "suggestion-box";
+
+
+    document.getElementById(
+        "suggestionBox"
+    ).innerHTML =
+    "💡 Enter a password to see suggestions.";
+
+}
+
+
+/* =====================================================
+   SLEEP
+===================================================== */
+
+function sleep(ms) {
+
+    return new Promise(
+        resolve =>
+        setTimeout(
+            resolve,
+            ms
+        )
+    );
+
+}
+
+</script>
+
+</body>
+
+</html>
+```
